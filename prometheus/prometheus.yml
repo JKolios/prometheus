@@ -63,5 +63,5 @@ scrape_configs:
       port: 9100
     
     static_configs:
-            - targets: ['transmission-exporter:19091', 'speedport_exporter:8000']
+            - targets: ['transmission-exporter:19091', 'speedport-exporter:8000']
 

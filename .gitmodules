@@ -1,0 +1,3 @@
+[submodule "speedport-exporter"]
+	path = speedport-exporter
+	url = https://github.com/JKolios/speedport-exporter
