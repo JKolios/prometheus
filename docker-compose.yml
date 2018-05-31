@@ -20,7 +20,6 @@ services:
       - 9090:9090
     links:
       - alertmanager
-      - transmission-exporter 
     networks:
       - back-tier
       - external
