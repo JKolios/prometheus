@@ -1,20 +1,16 @@
 version: '3.1'
 
-volumes:
-    prometheus_data: {}
-    grafana_data: {}
-
 networks:
   front-tier:
   back-tier:
+  external:
 
 services:
-
   prometheus:
     image: prom/prometheus:v2.1.0
     volumes:
       - ./prometheus/:/etc/prometheus/
-      - prometheus_data:/prometheus
+      - ./prometheus/persistence:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -23,36 +19,12 @@ services:
     ports:
       - 9090:9090
     links:
-      - cadvisor:cadvisor
-      - alertmanager:alertmanager
-    depends_on:
-      - cadvisor
+      - alertmanager
+      - transmission-exporter 
     networks:
       - back-tier
+      - external
     restart: always
-#    deploy:
-#      placement:
-#        constraints:
-#          - node.hostname == ${HOSTNAME}
-
-  node-exporter:
-    image: prom/node-exporter
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command: 
-      - '--path.procfs=/host/proc' 
-      - '--path.sysfs=/host/sys'
-      - --collector.filesystem.ignored-mount-points
-      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
-    ports:
-      - 9100:9100
-    networks:
-      - back-tier
-    restart: always
-    deploy:
-      mode: global
 
   alertmanager:
     image: prom/alertmanager
@@ -66,25 +38,7 @@ services:
     command:
       - '--config.file=/etc/alertmanager/config.yml'
       - '--storage.path=/alertmanager'
-#    deploy:
-#      placement:
-#        constraints:
-#          - node.hostname == ${HOSTNAME}
-  cadvisor:
-    image: google/cadvisor
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:rw
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    ports:
-      - 8080:8080
-    networks:
-      - back-tier
-    restart: always
-    deploy:
-      mode: global
-
+  
   grafana:
     image: grafana/grafana
     depends_on:
@@ -92,7 +46,7 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - grafana_data:/var/lib/grafana
+      - ./grafana/persistence:/var/lib/grafana
       - ./grafana/provisioning/:/etc/grafana/provisioning/
     env_file:
       - ./grafana/config.monitoring
@@ -101,3 +55,24 @@ services:
       - front-tier
     restart: always
 
+  transmission-exporter:
+    image: metalmatze/transmission-exporter
+    ports:
+      - 19091:19091
+    env_file: ./transmission-exporter/.env
+    networks:
+      - back-tier
+      - external
+
+  speedport-exporter:
+    build: ./speedport-exporter
+    image: speedport-exporter:latest
+    depends_on:
+      - prometheus
+    ports:
+      - 3001:3001
+    env_file:
+      - ./speedport-exporter/.env
+    networks:
+      - back-tier
+      - external
